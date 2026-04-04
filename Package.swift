@@ -34,6 +34,10 @@ let package = Package(
             dependencies: ["Core"]
         ),
         .testTarget(
+            name: "AppTests",
+            dependencies: ["App", "Core"]
+        ),
+        .testTarget(
             name: "AppleCalendarTests",
             dependencies: ["AppleCalendar", "Core"]
         )

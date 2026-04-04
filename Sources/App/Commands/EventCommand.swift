@@ -45,7 +45,9 @@ struct EventsListCommand: AsyncParsableCommand {
         if json {
             try OutputPrinter.printJSON(events)
         } else {
-            OutputPrinter.printEvents(events)
+            let calendars = try await CLIContext.provider.listCalendars()
+            let calendarTitles = Dictionary(uniqueKeysWithValues: calendars.map { ($0.id, $0.title) })
+            OutputPrinter.printEvents(events, calendarTitles: calendarTitles)
         }
     }
 }
@@ -85,7 +87,9 @@ struct EventsSearchCommand: AsyncParsableCommand {
         if json {
             try OutputPrinter.printJSON(events)
         } else {
-            OutputPrinter.printEvents(events)
+            let calendars = try await CLIContext.provider.listCalendars()
+            let calendarTitles = Dictionary(uniqueKeysWithValues: calendars.map { ($0.id, $0.title) })
+            OutputPrinter.printEvents(events, calendarTitles: calendarTitles)
         }
     }
 }
