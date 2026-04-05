@@ -24,7 +24,9 @@ public final class AppleCalendarProvider: CalendarProvider, @unchecked Sendable 
     }
 
     public func listCalendars() async throws -> [CalendarSummary] {
-        store.calendars(for: .event)
+        try ensureReadAccess()
+
+        return store.calendars(for: .event)
             .map(EventKitMappers.calendarSummary)
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
     }
@@ -44,48 +46,28 @@ public final class AppleCalendarProvider: CalendarProvider, @unchecked Sendable 
             return calendar
         }
 
-        struct CalendarLookupError: LocalizedError {
-            let id: String?
-            let name: String?
-
-            var errorDescription: String? {
-                "No calendar matched the provided lookup."
-            }
-
-            var failureReason: String? {
-                let fields = [
-                    id.map { "id=\($0)" },
-                    name.map { "name=\($0)" }
-                ].compactMap { $0 }
-
-                return fields.isEmpty ? nil : fields.joined(separator: ", ")
-            }
-        }
-
-        throw CalendarLookupError(id: id, name: name)
+        throw DaymarkError.notFound(
+            resource: "calendar",
+            details: [
+                "id": id ?? "",
+                "name": name ?? ""
+            ].filter { $0.value.isEmpty == false }
+        )
     }
 
     public func getEvent(id: String) async throws -> CalendarEvent {
+        try ensureReadAccess()
+
         guard let event = store.event(withIdentifier: id) else {
-            struct EventLookupError: LocalizedError {
-                let id: String
-
-                var errorDescription: String? {
-                    "No event matched the provided identifier."
-                }
-
-                var failureReason: String? {
-                    "id=\(id)"
-                }
-            }
-
-            throw EventLookupError(id: id)
+            throw DaymarkError.notFound(resource: "event", details: ["id": id])
         }
 
         return EventKitMappers.calendarEvent(from: event)
     }
 
     public func listEvents(from start: Date, to end: Date, calendars: [String]) async throws -> [CalendarEvent] {
+        try ensureReadAccess()
+
         let selectedCalendars = matchingCalendars(calendars)
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: selectedCalendars)
 
@@ -100,6 +82,8 @@ public final class AppleCalendarProvider: CalendarProvider, @unchecked Sendable 
         to end: Date,
         calendars: [String]
     ) async throws -> [CalendarEvent] {
+        try ensureReadAccess()
+
         let needle = query.lowercased()
 
         return try await listEvents(from: start, to: end, calendars: calendars).filter { event in
@@ -117,6 +101,17 @@ public final class AppleCalendarProvider: CalendarProvider, @unchecked Sendable 
         let allCalendars = store.calendars(for: .event)
         return allCalendars.filter { calendar in
             filters.contains(calendar.calendarIdentifier) || filters.contains(calendar.title)
+        }
+    }
+
+    private func ensureReadAccess() throws {
+        switch authorizationStatus() {
+        case .fullAccess, .writeOnly:
+            return
+        case .notDetermined:
+            throw DaymarkError.authorizationRequired
+        case .denied, .restricted:
+            throw DaymarkError.permissionDenied
         }
     }
 }

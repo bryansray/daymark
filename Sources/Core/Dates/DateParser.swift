@@ -23,17 +23,6 @@ public enum DateParser {
             return date
         }
 
-        throw DateParserError.invalidDate(input)
-    }
-}
-
-public enum DateParserError: LocalizedError, Equatable {
-    case invalidDate(String)
-
-    public var errorDescription: String? {
-        switch self {
-        case let .invalidDate(input):
-            "Invalid date '\(input)'. Use ISO-8601 or YYYY-MM-DD."
-        }
+        throw DaymarkError.invalidDate(input)
     }
 }

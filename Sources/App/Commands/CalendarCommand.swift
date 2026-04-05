@@ -1,4 +1,5 @@
 import ArgumentParser
+import Core
 
 @available(macOS 10.15, *)
 struct CalendarsCommand: AsyncParsableCommand {
@@ -55,7 +56,7 @@ struct CalendarsGetCommand: AsyncParsableCommand {
 
     mutating func run() async throws {
         guard id != nil || name != nil else {
-            throw ValidationError("Provide --id or --name.")
+            throw DaymarkError.validation(message: "Provide --id or --name.")
         }
 
         let calendar = try await CLIContext.provider.getCalendar(id: id, name: name)

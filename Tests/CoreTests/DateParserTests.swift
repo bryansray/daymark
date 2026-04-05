@@ -14,7 +14,7 @@ final class DateParserTests: XCTestCase {
 
     func testRejectsInvalidDates() {
         XCTAssertThrowsError(try DateParser.parse("banana")) { error in
-            XCTAssertEqual(error as? DateParserError, .invalidDate("banana"))
+            XCTAssertEqual(error as? DaymarkError, .invalidDate("banana"))
         }
     }
 }
