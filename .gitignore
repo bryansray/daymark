@@ -2,7 +2,7 @@
 
 # SwiftPM
 .build/
-.build-validation/
+.build*/
 .swiftpm/
 
 # Xcode
