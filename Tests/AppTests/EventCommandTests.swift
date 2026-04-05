@@ -1,10 +1,12 @@
 @testable import App
 import Core
+import Foundation
 import XCTest
 
 final class EventCommandTests: XCTestCase {
     override func tearDown() {
         CLIContext.reset()
+        OutputPrinter.resetWriter()
         super.tearDown()
     }
 
@@ -14,6 +16,8 @@ final class EventCommandTests: XCTestCase {
             CalendarSummary(id: "work", title: "Work", source: "iCloud", isWritable: true)
         ]
         CLIContext.provider = provider
+        let output = CapturedOutput()
+        OutputPrinter.setWriter { output.append($0) }
 
         var command = try EventsTodayCommand.parse(["--calendar", "work"])
 
@@ -25,6 +29,7 @@ final class EventCommandTests: XCTestCase {
         XCTAssertEqual(call.start, calendar.startOfDay(for: call.start))
         XCTAssertEqual(call.end, calendar.date(byAdding: .day, value: 1, to: call.start))
         XCTAssertEqual(call.calendars, ["work"])
+        XCTAssertEqual(output.messages, ["No events found."])
     }
 
     func testTomorrowCommandUsesNextDayRange() async throws {
@@ -33,6 +38,8 @@ final class EventCommandTests: XCTestCase {
             CalendarSummary(id: "personal", title: "Personal", source: "iCloud", isWritable: true)
         ]
         CLIContext.provider = provider
+        let output = CapturedOutput()
+        OutputPrinter.setWriter { output.append($0) }
 
         var command = try EventsTomorrowCommand.parse(["--calendar", "personal"])
 
@@ -47,6 +54,7 @@ final class EventCommandTests: XCTestCase {
         XCTAssertEqual(call.start.timeIntervalSinceReferenceDate, tomorrowStart.timeIntervalSinceReferenceDate, accuracy: 1)
         XCTAssertEqual(call.end.timeIntervalSinceReferenceDate, nextDayStart.timeIntervalSinceReferenceDate, accuracy: 1)
         XCTAssertEqual(call.calendars, ["personal"])
+        XCTAssertEqual(output.messages, ["No events found."])
     }
 
     func testSearchCommandUsesProviderSearchWhenQueryIsPresent() async throws {
@@ -62,6 +70,8 @@ final class EventCommandTests: XCTestCase {
             )
         ]
         CLIContext.provider = provider
+        let output = CapturedOutput()
+        OutputPrinter.setWriter { output.append($0) }
 
         var command = try EventsSearchCommand.parse([
             "--query", "design",
@@ -75,5 +85,18 @@ final class EventCommandTests: XCTestCase {
         let call = try XCTUnwrap(provider.searchEventsCalls.first)
         XCTAssertEqual(call.query, "design")
         XCTAssertTrue(provider.listEventsCalls.isEmpty)
+        XCTAssertEqual(output.messages.count, 1)
+        XCTAssertTrue(output.messages[0].contains("\"title\" : \"Design Review\""))
+    }
+}
+
+private final class CapturedOutput: @unchecked Sendable {
+    private let lock = NSLock()
+    private(set) var messages: [String] = []
+
+    func append(_ message: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        messages.append(message)
     }
 }

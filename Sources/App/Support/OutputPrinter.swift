@@ -3,6 +3,8 @@ import Foundation
 import Rainbow
 
 enum OutputPrinter {
+    private static let writerStore = OutputWriterStore()
+
     static func printCalendars(_ calendars: [CalendarSummary]) {
         let rows = calendars.map { calendar in
             [
@@ -17,30 +19,30 @@ enum OutputPrinter {
             headers: ["Title", "Source", "Writable", "ID"],
             rows: rows
         ) {
-            Swift.print(line)
+            write(line)
         }
     }
 
     static func printEvents(_ events: [CalendarEvent], calendarTitles: [String: String]) {
         for line in renderEvents(events, calendarTitles: calendarTitles) {
-            Swift.print(line)
+            write(line)
         }
     }
 
     static func printEvent(_ event: CalendarEvent, calendarTitles: [String: String]) {
         for line in renderEvent(event, calendarTitles: calendarTitles) {
-            Swift.print(line)
+            write(line)
         }
     }
 
     static func printCalendar(_ calendar: CalendarSummary) {
         for line in renderCalendar(calendar) {
-            Swift.print(line)
+            write(line)
         }
     }
 
     static func printAuthorization(_ state: AuthorizationState) {
-        Swift.print(renderAuthorization(state))
+        write(renderAuthorization(state))
     }
 
     static func printJSON<T: Encodable>(_ value: T) throws {
@@ -49,8 +51,16 @@ enum OutputPrinter {
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(value)
         if let string = String(data: data, encoding: .utf8) {
-            Swift.print(string)
+            write(string)
         }
+    }
+
+    static func setWriter(_ writer: @escaping @Sendable (String) -> Void) {
+        writerStore.setWriter(writer)
+    }
+
+    static func resetWriter() {
+        writerStore.reset()
     }
 
     static func renderEvents(_ events: [CalendarEvent], calendarTitles: [String: String]) -> [String] {
@@ -214,6 +224,10 @@ enum OutputPrinter {
         text.lightBlack.italic
     }
 
+    private static func write(_ message: String) {
+        writerStore.write(message)
+    }
+
     private static func renderGroupedEvents(_ events: [CalendarEvent], calendarTitles: [String: String]) -> [String] {
         let groupedEvents = Dictionary(grouping: events, by: eventDay)
         let orderedDays = groupedEvents.keys.sorted()
@@ -309,5 +323,31 @@ enum OutputPrinter {
         formatter.timeZone = .autoupdatingCurrent
         formatter.dateFormat = "EEEE, MMMM d"
         return formatter
+    }
+}
+
+private final class OutputWriterStore: @unchecked Sendable {
+    private let lock = NSLock()
+    private var writer: @Sendable (String) -> Void = { Swift.print($0) }
+
+    func write(_ message: String) {
+        let writer = currentWriter()
+        writer(message)
+    }
+
+    func setWriter(_ writer: @escaping @Sendable (String) -> Void) {
+        lock.lock()
+        defer { lock.unlock() }
+        self.writer = writer
+    }
+
+    func reset() {
+        setWriter { Swift.print($0) }
+    }
+
+    private func currentWriter() -> @Sendable (String) -> Void {
+        lock.lock()
+        defer { lock.unlock() }
+        return writer
     }
 }
