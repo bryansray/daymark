@@ -1,6 +1,15 @@
 {
-  "originHash" : "efa39a47876163e0b217fd5aabf53504450846d6ea8e98f7f0d3d67cd9f11414",
+  "originHash" : "e941ef53b3574d53967962148fd7c75df19a34dd75979fc868af56de75df8639",
   "pins" : [
+    {
+      "identity" : "rainbow",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/onevcat/Rainbow",
+      "state" : {
+        "revision" : "cdf146ae671b2624917648b61c908d1244b98ca1",
+        "version" : "4.2.1"
+      }
+    },
     {
       "identity" : "swift-argument-parser",
       "kind" : "remoteSourceControl",

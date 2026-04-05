@@ -3,6 +3,19 @@ import Core
 import XCTest
 
 final class OutputPrinterTests: XCTestCase {
+    func testRenderTableIncludesHeadersAndRows() {
+        let lines = OutputPrinter.renderTable(
+            headers: ["Name", "State"],
+            rows: [["Work", "yes"], ["Personal", "no"]]
+        )
+
+        XCTAssertEqual(lines.count, 4)
+        XCTAssertTrue(lines[0].contains("Name"))
+        XCTAssertTrue(lines[0].contains("State"))
+        XCTAssertTrue(lines[2].contains("Work"))
+        XCTAssertTrue(lines[3].contains("Personal"))
+    }
+
     func testRenderEventsIncludesCalendarTitleAndLocation() {
         let event = CalendarEvent(
             id: "evt-1",
@@ -38,5 +51,10 @@ final class OutputPrinterTests: XCTestCase {
 
         let lines = OutputPrinter.renderEvents([event], calendarTitles: [:])
         XCTAssertTrue(lines[0].contains("All day"))
+    }
+
+    func testRenderAuthorizationUsesStateText() {
+        XCTAssertTrue(OutputPrinter.renderAuthorization(.fullAccess).contains("fullAccess"))
+        XCTAssertTrue(OutputPrinter.renderAuthorization(.denied).contains("denied"))
     }
 }

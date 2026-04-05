@@ -11,7 +11,8 @@ let package = Package(
         .executable(name: "daymark", targets: ["App"])
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0")
+        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
+        .package(url: "https://github.com/onevcat/Rainbow", from: "4.0.0")
     ],
     targets: [
         .executableTarget(
@@ -19,7 +20,8 @@ let package = Package(
             dependencies: [
                 "Core",
                 "AppleCalendar",
-                .product(name: "ArgumentParser", package: "swift-argument-parser")
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
+                "Rainbow"
             ]
         ),
         .target(
