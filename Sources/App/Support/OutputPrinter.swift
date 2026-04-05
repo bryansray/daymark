@@ -58,6 +58,10 @@ enum OutputPrinter {
             return [emptyState("No events found.")]
         }
 
+        if distinctEventDays(in: events) > 1 {
+            return renderGroupedEvents(events, calendarTitles: calendarTitles)
+        }
+
         var lines: [String] = []
 
         for (index, event) in events.enumerated() {
@@ -161,6 +165,11 @@ enum OutputPrinter {
         return "\(date)  ".lightBlack + "\(timeDescription)  ".blue.bold + event.title.bold + recurrenceBadge(for: event.recurrence)
     }
 
+    private static func groupedEventHeadline(_ event: CalendarEvent) -> String {
+        let timeDescription = event.isAllDay ? "All day" : "\(timeFormatter.string(from: event.startDate))-\(timeFormatter.string(from: event.endDate))"
+        return "  " + "\(timeDescription)  ".blue.bold + event.title.bold + recurrenceBadge(for: event.recurrence)
+    }
+
     private static func eventDateSummary(_ event: CalendarEvent) -> String {
         let date = dayFormatter.string(from: event.startDate)
         let timeDescription = event.isAllDay ? "All day" : "\(timeFormatter.string(from: event.startDate))-\(timeFormatter.string(from: event.endDate))"
@@ -203,6 +212,36 @@ enum OutputPrinter {
 
     private static func emptyState(_ text: String) -> String {
         text.lightBlack.italic
+    }
+
+    private static func renderGroupedEvents(_ events: [CalendarEvent], calendarTitles: [String: String]) -> [String] {
+        let groupedEvents = Dictionary(grouping: events, by: eventDay)
+        let orderedDays = groupedEvents.keys.sorted()
+        var lines: [String] = []
+
+        for (dayIndex, day) in orderedDays.enumerated() {
+            if dayIndex > 0 {
+                lines.append("")
+            }
+
+            lines.append(dayHeaderFormatter.string(from: day).cyan.bold)
+
+            let dayEvents = groupedEvents[day] ?? []
+            for event in dayEvents {
+                lines.append(groupedEventHeadline(event))
+                lines.append(eventDetails(event, calendarTitles: calendarTitles))
+            }
+        }
+
+        return lines
+    }
+
+    private static func distinctEventDays(in events: [CalendarEvent]) -> Int {
+        Set(events.map(eventDay)).count
+    }
+
+    private static func eventDay(for event: CalendarEvent) -> Date {
+        Calendar.autoupdatingCurrent.startOfDay(for: event.startDate)
     }
 
     private static func recurrenceBadge(for recurrence: EventRecurrence?) -> String {
@@ -261,6 +300,14 @@ enum OutputPrinter {
         formatter.timeZone = .autoupdatingCurrent
         formatter.dateStyle = .none
         formatter.timeStyle = .short
+        return formatter
+    }
+
+    private static var dayHeaderFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale.autoupdatingCurrent
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.dateFormat = "EEEE, MMMM d"
         return formatter
     }
 }

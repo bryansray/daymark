@@ -108,6 +108,38 @@ final class OutputPrinterTests: XCTestCase {
         XCTAssertTrue(lines[0].contains("All day"))
     }
 
+    func testRenderEventsGroupsMultiDayResultsByDay() {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+
+        let sundayEvent = CalendarEvent(
+            id: "evt-1",
+            calendarID: "work",
+            title: "Standup",
+            startDate: formatter.date(from: "2026-04-05T09:30:00-05:00") ?? .distantPast,
+            endDate: formatter.date(from: "2026-04-05T10:00:00-05:00") ?? .distantFuture,
+            isAllDay: false
+        )
+        let mondayEvent = CalendarEvent(
+            id: "evt-2",
+            calendarID: "work",
+            title: "Planning",
+            startDate: formatter.date(from: "2026-04-06T09:30:00-05:00") ?? .distantPast,
+            endDate: formatter.date(from: "2026-04-06T10:30:00-05:00") ?? .distantFuture,
+            isAllDay: false
+        )
+
+        let lines = OutputPrinter.renderEvents([sundayEvent, mondayEvent], calendarTitles: ["work": "Work"])
+
+        XCTAssertTrue(lines[0].contains("Sunday"))
+        XCTAssertTrue(lines[1].contains("Standup"))
+        XCTAssertTrue(lines[2].contains("calendar: Work"))
+        XCTAssertEqual(lines[3], "")
+        XCTAssertTrue(lines[4].contains("Monday"))
+        XCTAssertTrue(lines[5].contains("Planning"))
+        XCTAssertTrue(lines[6].contains("calendar: Work"))
+    }
+
     func testRenderAuthorizationUsesStateText() {
         XCTAssertTrue(OutputPrinter.renderAuthorization(.fullAccess).contains("fullAccess"))
         XCTAssertTrue(OutputPrinter.renderAuthorization(.denied).contains("denied"))
