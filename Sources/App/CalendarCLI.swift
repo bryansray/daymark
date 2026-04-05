@@ -1,6 +1,5 @@
 import ArgumentParser
 
-@main
 @available(macOS 10.15, *)
 struct CalendarCLI: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
