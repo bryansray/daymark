@@ -3,6 +3,23 @@ import Core
 import XCTest
 
 final class OutputPrinterTests: XCTestCase {
+    func testRenderCalendarIncludesTitleAndMetadata() {
+        let lines = OutputPrinter.renderCalendar(
+            CalendarSummary(
+                id: "abc123",
+                title: "Work",
+                source: "iCloud",
+                isWritable: true
+            )
+        )
+
+        XCTAssertEqual(lines.count, 3)
+        XCTAssertTrue(lines[0].contains("Work"))
+        XCTAssertTrue(lines[1].contains("source: iCloud"))
+        XCTAssertTrue(lines[1].contains("writable: yes"))
+        XCTAssertTrue(lines[2].contains("id: abc123"))
+    }
+
     func testRenderTableIncludesHeadersAndRows() {
         let lines = OutputPrinter.renderTable(
             headers: ["Name", "State"],

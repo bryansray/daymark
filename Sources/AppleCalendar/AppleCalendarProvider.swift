@@ -29,6 +29,42 @@ public final class AppleCalendarProvider: CalendarProvider, @unchecked Sendable 
             .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
     }
 
+    public func getCalendar(id: String?, name: String?) async throws -> CalendarSummary {
+        let calendars = try await listCalendars()
+
+        if let id,
+           let calendar = calendars.first(where: { $0.id == id })
+        {
+            return calendar
+        }
+
+        if let name,
+           let calendar = calendars.first(where: { $0.title == name })
+        {
+            return calendar
+        }
+
+        struct CalendarLookupError: LocalizedError {
+            let id: String?
+            let name: String?
+
+            var errorDescription: String? {
+                "No calendar matched the provided lookup."
+            }
+
+            var failureReason: String? {
+                let fields = [
+                    id.map { "id=\($0)" },
+                    name.map { "name=\($0)" }
+                ].compactMap { $0 }
+
+                return fields.isEmpty ? nil : fields.joined(separator: ", ")
+            }
+        }
+
+        throw CalendarLookupError(id: id, name: name)
+    }
+
     public func listEvents(from start: Date, to end: Date, calendars: [String]) async throws -> [CalendarEvent] {
         let selectedCalendars = matchingCalendars(calendars)
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: selectedCalendars)

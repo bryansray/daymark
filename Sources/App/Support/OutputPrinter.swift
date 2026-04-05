@@ -27,6 +27,12 @@ enum OutputPrinter {
         }
     }
 
+    static func printCalendar(_ calendar: CalendarSummary) {
+        for line in renderCalendar(calendar) {
+            Swift.print(line)
+        }
+    }
+
     static func printAuthorization(_ state: AuthorizationState) {
         Swift.print(renderAuthorization(state))
     }
@@ -71,6 +77,14 @@ enum OutputPrinter {
         case .denied, .restricted:
             return state.rawValue.red.bold
         }
+    }
+
+    static func renderCalendar(_ calendar: CalendarSummary) -> [String] {
+        [
+            calendar.title.bold,
+            "  " + "source: \(calendar.source)  |  writable: \(calendar.isWritable ? "yes" : "no")".lightBlack,
+            "  " + "id: \(calendar.id)".lightBlack
+        ]
     }
 
     static func renderTable(headers: [String], rows: [[String]]) -> [String] {
