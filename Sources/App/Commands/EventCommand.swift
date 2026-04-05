@@ -63,13 +63,18 @@ struct EventsListCommand: AsyncParsableCommand {
     @Option(name: .long, parsing: .upToNextOption, help: "Calendar ids or exact titles.")
     var calendar: [String] = []
 
+    @Option(name: .long, help: "Maximum number of events to return.")
+    var limit: Int?
+
     @Flag(name: .long, help: "Emit JSON output.")
     var json = false
 
     mutating func run() async throws {
+        try validateLimit(limit)
+
         let start = try DateParser.parse(from)
         let end = try DateParser.parse(to)
-        try await printEvents(from: start, to: end, calendars: calendar, json: json)
+        try await printEvents(from: start, to: end, calendars: calendar, limit: limit, json: json)
     }
 }
 
@@ -112,9 +117,7 @@ struct EventsUpcomingCommand: AsyncParsableCommand {
     var json = false
 
     mutating func run() async throws {
-        guard limit > 0 else {
-            throw DaymarkError.validation(message: "Limit must be greater than zero.")
-        }
+        try validateLimit(limit)
 
         let upcoming = try DateRange.upcoming(daysAhead: days)
         let events = try await CLIContext.provider.listEvents(
@@ -122,8 +125,7 @@ struct EventsUpcomingCommand: AsyncParsableCommand {
             to: upcoming.end,
             calendars: calendar
         )
-
-        let limitedEvents = Array(events.prefix(limit))
+        let limitedEvents = applyLimit(limit, to: events)
 
         if json {
             try OutputPrinter.printJSON(limitedEvents)
@@ -155,6 +157,9 @@ struct EventsSearchCommand: AsyncParsableCommand {
     @Option(name: .long, parsing: .upToNextOption, help: "Calendar ids or exact titles.")
     var calendar: [String] = []
 
+    @Option(name: .long, help: "Maximum number of events to return.")
+    var limit: Int?
+
     @Flag(name: .long, help: "Emit JSON output.")
     var json = false
 
@@ -162,15 +167,17 @@ struct EventsSearchCommand: AsyncParsableCommand {
         guard query?.isEmpty == false || id?.isEmpty == false else {
             throw DaymarkError.validation(message: "Provide at least one of --query or --id.")
         }
+        try validateLimit(limit)
 
         let start = try DateParser.parse(from)
         let end = try DateParser.parse(to)
         let events = try await searchEvents(from: start, to: end, calendars: calendar)
+        let limitedEvents = applyLimit(limit, to: events)
 
         if json {
-            try OutputPrinter.printJSON(events)
+            try OutputPrinter.printJSON(limitedEvents)
         } else {
-            try await printEvents(events)
+            try await printEvents(limitedEvents)
         }
     }
 
@@ -205,14 +212,16 @@ private func printEvents(
     from start: Date,
     to end: Date,
     calendars: [String],
+    limit: Int? = nil,
     json: Bool
 ) async throws {
     let events = try await CLIContext.provider.listEvents(from: start, to: end, calendars: calendars)
+    let limitedEvents = applyLimit(limit, to: events)
 
     if json {
-        try OutputPrinter.printJSON(events)
+        try OutputPrinter.printJSON(limitedEvents)
     } else {
-        try await printEvents(events)
+        try await printEvents(limitedEvents)
     }
 }
 
@@ -221,4 +230,24 @@ private func printEvents(_ events: [CalendarEvent]) async throws {
     let calendars = try await CLIContext.provider.listCalendars()
     let calendarTitles = Dictionary(uniqueKeysWithValues: calendars.map { ($0.id, $0.title) })
     OutputPrinter.printEvents(events, calendarTitles: calendarTitles)
+}
+
+@available(macOS 10.15, *)
+private func applyLimit(_ limit: Int?, to events: [CalendarEvent]) -> [CalendarEvent] {
+    guard let limit else {
+        return events
+    }
+
+    return Array(events.prefix(limit))
+}
+
+@available(macOS 10.15, *)
+private func validateLimit(_ limit: Int?) throws {
+    guard let limit else {
+        return
+    }
+
+    guard limit > 0 else {
+        throw DaymarkError.validation(message: "Limit must be greater than zero.")
+    }
 }
