@@ -7,6 +7,18 @@ default:
 build:
   swift build
 
+# Build the CLI in release mode.
+release:
+  swift build -c release
+
+# Symlink the release binary into ~/.local/bin.
+link:
+  mkdir -p "$HOME/.local/bin"
+  ln -sf "$PWD/.build/release/daymark" "$HOME/.local/bin/daymark"
+
+# Build the release binary and install the local symlink.
+install-local: release link
+
 # Run the full SwiftPM test suite.
 test:
   swift test
