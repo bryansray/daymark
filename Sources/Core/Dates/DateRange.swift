@@ -21,4 +21,20 @@ public struct DateRange: Sendable, Equatable {
 
         return DateRange(start: start, end: end)
     }
+
+    public static func upcoming(
+        now: Date = Date(),
+        daysAhead: Int = 30,
+        calendar: Calendar = .current
+    ) throws -> DateRange {
+        guard daysAhead > 0 else {
+            throw DaymarkError.validation(message: "Upcoming range must be at least one day.")
+        }
+
+        guard let end = calendar.date(byAdding: .day, value: daysAhead, to: now) else {
+            throw DaymarkError.providerFailure(message: "Could not compute the end of the upcoming range.")
+        }
+
+        return DateRange(start: now, end: end)
+    }
 }

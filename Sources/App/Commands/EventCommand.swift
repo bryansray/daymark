@@ -11,6 +11,7 @@ struct EventsCommand: AsyncParsableCommand {
             EventsGetCommand.self,
             EventsListCommand.self,
             EventsTodayCommand.self,
+            EventsUpcomingCommand.self,
             EventsSearchCommand.self
         ]
     )
@@ -88,6 +89,47 @@ struct EventsTodayCommand: AsyncParsableCommand {
     mutating func run() async throws {
         let today = try DateRange.today()
         try await printEvents(from: today.start, to: today.end, calendars: calendar, json: json)
+    }
+}
+
+@available(macOS 10.15, *)
+struct EventsUpcomingCommand: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "upcoming",
+        abstract: "List the next upcoming events from now."
+    )
+
+    @Option(name: .long, help: "Maximum number of events to return.")
+    var limit: Int = 10
+
+    @Option(name: .long, help: "How many days ahead to search.")
+    var days: Int = 30
+
+    @Option(name: .long, parsing: .upToNextOption, help: "Calendar ids or exact titles.")
+    var calendar: [String] = []
+
+    @Flag(name: .long, help: "Emit JSON output.")
+    var json = false
+
+    mutating func run() async throws {
+        guard limit > 0 else {
+            throw DaymarkError.validation(message: "Limit must be greater than zero.")
+        }
+
+        let upcoming = try DateRange.upcoming(daysAhead: days)
+        let events = try await CLIContext.provider.listEvents(
+            from: upcoming.start,
+            to: upcoming.end,
+            calendars: calendar
+        )
+
+        let limitedEvents = Array(events.prefix(limit))
+
+        if json {
+            try OutputPrinter.printJSON(limitedEvents)
+        } else {
+            try await printEvents(limitedEvents)
+        }
     }
 }
 

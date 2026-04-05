@@ -35,6 +35,29 @@ final class DateParserTests: XCTestCase {
         XCTAssertEqual(formatter.string(from: range.end), "2026-04-06T00:00:00-05:00")
     }
 
+    func testUpcomingRangeStartsNowAndEndsAfterRequestedDays() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: -18_000) ?? .current
+
+        let parser = ISO8601DateFormatter()
+        parser.formatOptions = [.withInternetDateTime]
+        let now = try XCTUnwrap(parser.date(from: "2026-04-05T22:55:00-05:00"))
+
+        let range = try DateRange.upcoming(now: now, daysAhead: 14, calendar: calendar)
+
+        XCTAssertEqual(range.start, now)
+        XCTAssertEqual(range.end.timeIntervalSince(now), 14 * 24 * 60 * 60, accuracy: 1)
+    }
+
+    func testUpcomingRangeRejectsNonPositiveDayCounts() {
+        XCTAssertThrowsError(try DateRange.upcoming(daysAhead: 0)) { error in
+            XCTAssertEqual(
+                error as? DaymarkError,
+                .validation(message: "Upcoming range must be at least one day.")
+            )
+        }
+    }
+
     func testCalendarEventMatchesSearchTextAndPartialID() {
         let event = CalendarEvent(
             id: "abc-123-xyz",
