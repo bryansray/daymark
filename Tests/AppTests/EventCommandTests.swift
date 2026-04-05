@@ -88,6 +88,96 @@ final class EventCommandTests: XCTestCase {
         XCTAssertEqual(output.messages.count, 1)
         XCTAssertTrue(output.messages[0].contains("\"title\" : \"Design Review\""))
     }
+
+    func testSearchCommandFiltersByPartialID() async throws {
+        let provider = TestCalendarProvider()
+        provider.calendars = [
+            CalendarSummary(id: "work", title: "Work", source: "iCloud", isWritable: true)
+        ]
+        provider.events = [
+            makeEvent(id: "abc-123", title: "Design Review"),
+            makeEvent(id: "xyz-789", title: "Planning")
+        ]
+        CLIContext.provider = provider
+        let output = CapturedOutput()
+        OutputPrinter.setWriter { output.append($0) }
+
+        var command = try EventsSearchCommand.parse([
+            "--id", "123",
+            "--from", "2026-04-01",
+            "--to", "2026-04-30"
+        ])
+
+        try await command.run()
+
+        XCTAssertEqual(provider.searchEventsCalls.count, 0)
+        XCTAssertEqual(provider.listEventsCalls.count, 1)
+        XCTAssertEqual(output.messages.count, 2)
+        XCTAssertTrue(output.messages[0].contains("Design Review"))
+        XCTAssertTrue(output.messages[1].contains("id: abc-123"))
+    }
+
+    func testListCommandAppliesLimitAfterFetch() async throws {
+        let provider = TestCalendarProvider()
+        provider.calendars = [
+            CalendarSummary(id: "work", title: "Work", source: "iCloud", isWritable: true)
+        ]
+        provider.events = [
+            makeEvent(id: "evt-1", title: "First"),
+            makeEvent(id: "evt-2", title: "Second"),
+            makeEvent(id: "evt-3", title: "Third")
+        ]
+        CLIContext.provider = provider
+        let output = CapturedOutput()
+        OutputPrinter.setWriter { output.append($0) }
+
+        var command = try EventsListCommand.parse([
+            "--from", "2026-04-01",
+            "--to", "2026-04-30",
+            "--limit", "2"
+        ])
+
+        try await command.run()
+
+        XCTAssertEqual(provider.listEventsCalls.count, 1)
+        XCTAssertEqual(output.messages.count, 5)
+        XCTAssertTrue(output.messages[0].contains("First"))
+        XCTAssertEqual(output.messages[2], "")
+        XCTAssertTrue(output.messages[3].contains("Second"))
+        XCTAssertFalse(output.messages.joined(separator: "\n").contains("Third"))
+    }
+
+    func testUpcomingCommandUsesLimitAndRange() async throws {
+        let provider = TestCalendarProvider()
+        provider.calendars = [
+            CalendarSummary(id: "work", title: "Work", source: "iCloud", isWritable: true)
+        ]
+        provider.events = [
+            makeEvent(id: "evt-1", title: "First"),
+            makeEvent(id: "evt-2", title: "Second"),
+            makeEvent(id: "evt-3", title: "Third")
+        ]
+        CLIContext.provider = provider
+        let output = CapturedOutput()
+        OutputPrinter.setWriter { output.append($0) }
+
+        var command = try EventsUpcomingCommand.parse([
+            "--calendar", "work",
+            "--days", "7",
+            "--limit", "2"
+        ])
+
+        try await command.run()
+
+        let call = try XCTUnwrap(provider.listEventsCalls.first)
+        XCTAssertEqual(call.calendars, ["work"])
+        XCTAssertEqual(call.end.timeIntervalSince(call.start), 7 * 24 * 60 * 60, accuracy: 1)
+        XCTAssertEqual(output.messages.count, 5)
+        XCTAssertTrue(output.messages[0].contains("First"))
+        XCTAssertEqual(output.messages[2], "")
+        XCTAssertTrue(output.messages[3].contains("Second"))
+        XCTAssertFalse(output.messages.joined(separator: "\n").contains("Third"))
+    }
 }
 
 private final class CapturedOutput: @unchecked Sendable {
@@ -99,4 +189,15 @@ private final class CapturedOutput: @unchecked Sendable {
         defer { lock.unlock() }
         messages.append(message)
     }
+}
+
+private func makeEvent(id: String, title: String) -> CalendarEvent {
+    CalendarEvent(
+        id: id,
+        calendarID: "work",
+        title: title,
+        startDate: Date(timeIntervalSince1970: 1_775_298_600),
+        endDate: Date(timeIntervalSince1970: 1_775_300_400),
+        isAllDay: false
+    )
 }
