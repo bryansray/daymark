@@ -83,14 +83,8 @@ public final class AppleCalendarProvider: CalendarProvider, @unchecked Sendable 
         calendars: [String]
     ) async throws -> [CalendarEvent] {
         try ensureReadAccess()
-
-        let needle = query.lowercased()
-
-        return try await listEvents(from: start, to: end, calendars: calendars).filter { event in
-            event.title.lowercased().contains(needle)
-                || (event.location?.lowercased().contains(needle) ?? false)
-                || (event.notes?.lowercased().contains(needle) ?? false)
-        }
+        return try await listEvents(from: start, to: end, calendars: calendars)
+            .filter { $0.matchesSearchText(query) }
     }
 
     private func matchingCalendars(_ filters: [String]) -> [EKCalendar]? {

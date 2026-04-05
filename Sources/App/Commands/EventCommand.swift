@@ -95,11 +95,14 @@ struct EventsTodayCommand: AsyncParsableCommand {
 struct EventsSearchCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "search",
-        abstract: "Search events by text in a date range."
+        abstract: "Search events by text or partial identifier in a date range."
     )
 
     @Option(name: .long, help: "Search text for event title, location, and notes.")
-    var query: String
+    var query: String?
+
+    @Option(name: .long, help: "Partial event identifier.")
+    var id: String?
 
     @Option(name: .long, help: "Range start in ISO-8601 or YYYY-MM-DD.")
     var from: String
@@ -114,20 +117,44 @@ struct EventsSearchCommand: AsyncParsableCommand {
     var json = false
 
     mutating func run() async throws {
+        guard query?.isEmpty == false || id?.isEmpty == false else {
+            throw DaymarkError.validation(message: "Provide at least one of --query or --id.")
+        }
+
         let start = try DateParser.parse(from)
         let end = try DateParser.parse(to)
-        let events = try await CLIContext.provider.searchEvents(
-            query: query,
-            from: start,
-            to: end,
-            calendars: calendar
-        )
+        let events = try await searchEvents(from: start, to: end, calendars: calendar)
 
         if json {
             try OutputPrinter.printJSON(events)
         } else {
             try await printEvents(events)
         }
+    }
+
+    private func searchEvents(
+        from start: Date,
+        to end: Date,
+        calendars: [String]
+    ) async throws -> [CalendarEvent] {
+        var events: [CalendarEvent]
+
+        if let query, query.isEmpty == false {
+            events = try await CLIContext.provider.searchEvents(
+                query: query,
+                from: start,
+                to: end,
+                calendars: calendars
+            )
+        } else {
+            events = try await CLIContext.provider.listEvents(from: start, to: end, calendars: calendars)
+        }
+
+        if let id, id.isEmpty == false {
+            events = events.filter { $0.matchesPartialID(id) }
+        }
+
+        return events
     }
 }
 

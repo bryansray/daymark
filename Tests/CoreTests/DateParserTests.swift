@@ -34,4 +34,25 @@ final class DateParserTests: XCTestCase {
         XCTAssertEqual(formatter.string(from: range.start), "2026-04-05T00:00:00-05:00")
         XCTAssertEqual(formatter.string(from: range.end), "2026-04-06T00:00:00-05:00")
     }
+
+    func testCalendarEventMatchesSearchTextAndPartialID() {
+        let event = CalendarEvent(
+            id: "abc-123-xyz",
+            calendarID: "work",
+            title: "Design Review",
+            startDate: .distantPast,
+            endDate: .distantFuture,
+            isAllDay: false,
+            location: "Conference Room",
+            notes: "Bring mocks"
+        )
+
+        XCTAssertTrue(event.matchesSearchText("design"))
+        XCTAssertTrue(event.matchesSearchText("conference"))
+        XCTAssertTrue(event.matchesSearchText("mocks"))
+        XCTAssertFalse(event.matchesSearchText("dentist"))
+        XCTAssertTrue(event.matchesPartialID("123"))
+        XCTAssertTrue(event.matchesPartialID("ABC-123"))
+        XCTAssertFalse(event.matchesPartialID("999"))
+    }
 }
