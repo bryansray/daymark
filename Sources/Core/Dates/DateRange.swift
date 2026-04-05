@@ -22,6 +22,21 @@ public struct DateRange: Sendable, Equatable {
         return DateRange(start: start, end: end)
     }
 
+    public static func tomorrow(
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) throws -> DateRange {
+        let today = try DateRange.today(now: now, calendar: calendar)
+
+        guard let start = calendar.date(byAdding: .day, value: 1, to: today.start),
+              let end = calendar.date(byAdding: .day, value: 1, to: today.end)
+        else {
+            throw DaymarkError.providerFailure(message: "Could not compute the bounds for tomorrow.")
+        }
+
+        return DateRange(start: start, end: end)
+    }
+
     public static func upcoming(
         now: Date = Date(),
         daysAhead: Int = 30,

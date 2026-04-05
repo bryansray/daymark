@@ -11,6 +11,7 @@ struct EventsCommand: AsyncParsableCommand {
             EventsGetCommand.self,
             EventsListCommand.self,
             EventsTodayCommand.self,
+            EventsTomorrowCommand.self,
             EventsUpcomingCommand.self,
             EventsSearchCommand.self
         ]
@@ -94,6 +95,25 @@ struct EventsTodayCommand: AsyncParsableCommand {
     mutating func run() async throws {
         let today = try DateRange.today()
         try await printEvents(from: today.start, to: today.end, calendars: calendar, json: json)
+    }
+}
+
+@available(macOS 10.15, *)
+struct EventsTomorrowCommand: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "tomorrow",
+        abstract: "List events happening tomorrow in the current time zone."
+    )
+
+    @Option(name: .long, parsing: .upToNextOption, help: "Calendar ids or exact titles.")
+    var calendar: [String] = []
+
+    @Flag(name: .long, help: "Emit JSON output.")
+    var json = false
+
+    mutating func run() async throws {
+        let tomorrow = try DateRange.tomorrow()
+        try await printEvents(from: tomorrow.start, to: tomorrow.end, calendars: calendar, json: json)
     }
 }
 
