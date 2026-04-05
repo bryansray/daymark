@@ -15,6 +15,7 @@ This project is also a Swift learning exercise, so the code favors clear boundar
 
 Today, `daymark` can:
 
+- report its own version
 - inspect Apple Calendar authorization state
 - request Apple Calendar access
 - list calendars
@@ -42,6 +43,12 @@ Check authorization:
 
 ```bash
 swift run daymark auth status
+```
+
+Check the CLI version:
+
+```bash
+swift run daymark --version
 ```
 
 Request access:
@@ -82,6 +89,12 @@ swift run daymark auth grant
 Optional flags:
 
 - `--json` for machine-readable output
+
+### Global flags
+
+```bash
+swift run daymark --version
+```
 
 ### `calendars`
 
