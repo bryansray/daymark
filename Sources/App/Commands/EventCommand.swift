@@ -10,6 +10,7 @@ struct EventsCommand: AsyncParsableCommand {
         subcommands: [
             EventsGetCommand.self,
             EventsListCommand.self,
+            EventsTodayCommand.self,
             EventsSearchCommand.self
         ]
     )
@@ -67,15 +68,26 @@ struct EventsListCommand: AsyncParsableCommand {
     mutating func run() async throws {
         let start = try DateParser.parse(from)
         let end = try DateParser.parse(to)
-        let events = try await CLIContext.provider.listEvents(from: start, to: end, calendars: calendar)
+        try await printEvents(from: start, to: end, calendars: calendar, json: json)
+    }
+}
 
-        if json {
-            try OutputPrinter.printJSON(events)
-        } else {
-            let calendars = try await CLIContext.provider.listCalendars()
-            let calendarTitles = Dictionary(uniqueKeysWithValues: calendars.map { ($0.id, $0.title) })
-            OutputPrinter.printEvents(events, calendarTitles: calendarTitles)
-        }
+@available(macOS 10.15, *)
+struct EventsTodayCommand: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "today",
+        abstract: "List events happening today in the current time zone."
+    )
+
+    @Option(name: .long, parsing: .upToNextOption, help: "Calendar ids or exact titles.")
+    var calendar: [String] = []
+
+    @Flag(name: .long, help: "Emit JSON output.")
+    var json = false
+
+    mutating func run() async throws {
+        let today = try DateRange.today()
+        try await printEvents(from: today.start, to: today.end, calendars: calendar, json: json)
     }
 }
 
@@ -114,9 +126,30 @@ struct EventsSearchCommand: AsyncParsableCommand {
         if json {
             try OutputPrinter.printJSON(events)
         } else {
-            let calendars = try await CLIContext.provider.listCalendars()
-            let calendarTitles = Dictionary(uniqueKeysWithValues: calendars.map { ($0.id, $0.title) })
-            OutputPrinter.printEvents(events, calendarTitles: calendarTitles)
+            try await printEvents(events)
         }
     }
+}
+
+@available(macOS 10.15, *)
+private func printEvents(
+    from start: Date,
+    to end: Date,
+    calendars: [String],
+    json: Bool
+) async throws {
+    let events = try await CLIContext.provider.listEvents(from: start, to: end, calendars: calendars)
+
+    if json {
+        try OutputPrinter.printJSON(events)
+    } else {
+        try await printEvents(events)
+    }
+}
+
+@available(macOS 10.15, *)
+private func printEvents(_ events: [CalendarEvent]) async throws {
+    let calendars = try await CLIContext.provider.listCalendars()
+    let calendarTitles = Dictionary(uniqueKeysWithValues: calendars.map { ($0.id, $0.title) })
+    OutputPrinter.printEvents(events, calendarTitles: calendarTitles)
 }

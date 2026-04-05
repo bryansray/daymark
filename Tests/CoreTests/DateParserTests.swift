@@ -17,4 +17,21 @@ final class DateParserTests: XCTestCase {
             XCTAssertEqual(error as? DaymarkError, .invalidDate("banana"))
         }
     }
+
+    func testTodayRangeUsesLocalDayBoundaries() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: -18_000) ?? .current
+
+        let parser = ISO8601DateFormatter()
+        parser.formatOptions = [.withInternetDateTime]
+        let now = try XCTUnwrap(parser.date(from: "2026-04-05T22:55:00-05:00"))
+        let range = try DateRange.today(now: now, calendar: calendar)
+
+        let formatter = ISO8601DateFormatter()
+        formatter.timeZone = calendar.timeZone
+        formatter.formatOptions = [.withInternetDateTime]
+
+        XCTAssertEqual(formatter.string(from: range.start), "2026-04-05T00:00:00-05:00")
+        XCTAssertEqual(formatter.string(from: range.end), "2026-04-06T00:00:00-05:00")
+    }
 }
