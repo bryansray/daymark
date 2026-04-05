@@ -87,6 +87,18 @@ enum OutputPrinter {
             lines.append("  " + "notes: \(notes)".lightBlack)
         }
 
+        if let recurrence = event.recurrence {
+            lines.append("  " + recurrenceSummary(recurrence).lightBlack)
+
+            if let occurrenceDate = recurrence.occurrenceDate {
+                lines.append("  " + "occurrence-date: \(isoTimestamp(occurrenceDate))".lightBlack)
+            }
+
+            if let seriesIdentifier = recurrence.seriesIdentifier {
+                lines.append("  " + "series-id: \(seriesIdentifier)".lightBlack)
+            }
+        }
+
         lines.append("  " + "id: \(event.id)".lightBlack)
         return lines
     }
@@ -146,7 +158,7 @@ enum OutputPrinter {
     private static func eventHeadline(_ event: CalendarEvent) -> String {
         let date = dayFormatter.string(from: event.startDate)
         let timeDescription = event.isAllDay ? "All day" : "\(timeFormatter.string(from: event.startDate))-\(timeFormatter.string(from: event.endDate))"
-        return "\(date)  ".lightBlack + "\(timeDescription)  ".blue.bold + event.title.bold
+        return "\(date)  ".lightBlack + "\(timeDescription)  ".blue.bold + event.title.bold + recurrenceBadge(for: event.recurrence)
     }
 
     private static func eventDateSummary(_ event: CalendarEvent) -> String {
@@ -160,6 +172,10 @@ enum OutputPrinter {
             "calendar: \(calendarTitles[event.calendarID] ?? event.calendarID)",
             "id: \(event.id)"
         ]
+
+        if let recurrence = event.recurrence {
+            parts.append(recurrenceSummary(recurrence))
+        }
 
         if let location = trimmed(event.location) {
             parts.append("location: \(location)")
@@ -187,6 +203,48 @@ enum OutputPrinter {
 
     private static func emptyState(_ text: String) -> String {
         text.lightBlack.italic
+    }
+
+    private static func recurrenceBadge(for recurrence: EventRecurrence?) -> String {
+        guard let recurrence else {
+            return ""
+        }
+
+        let label: String
+        switch recurrence.kind {
+        case .series:
+            label = "repeating"
+        case .occurrence:
+            label = "occurrence"
+        case .detachedOccurrence:
+            label = "detached"
+        }
+
+        return " [" + label.magenta + "]"
+    }
+
+    private static func recurrenceSummary(_ recurrence: EventRecurrence) -> String {
+        let kind: String
+        switch recurrence.kind {
+        case .series:
+            kind = "recurrence: series"
+        case .occurrence:
+            kind = "recurrence: occurrence"
+        case .detachedOccurrence:
+            kind = "recurrence: detached occurrence"
+        }
+
+        if let summary = recurrence.summary {
+            return "\(kind) (\(summary))"
+        }
+
+        return kind
+    }
+
+    private static func isoTimestamp(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.string(from: date)
     }
 
     private static var dayFormatter: DateFormatter {

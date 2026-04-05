@@ -41,15 +41,21 @@ final class OutputPrinterTests: XCTestCase {
             startDate: Date(timeIntervalSince1970: 1_775_298_600),
             endDate: Date(timeIntervalSince1970: 1_775_300_400),
             isAllDay: false,
-            location: "Conference Room"
+            location: "Conference Room",
+            recurrence: EventRecurrence(
+                kind: .series,
+                summary: "Every week"
+            )
         )
 
         let lines = OutputPrinter.renderEvents([event], calendarTitles: ["work": "Work"])
 
         XCTAssertEqual(lines.count, 2)
         XCTAssertTrue(lines[0].contains("Team Standup"))
+        XCTAssertTrue(lines[0].contains("repeating"))
         XCTAssertTrue(lines[1].contains("calendar: Work"))
         XCTAssertTrue(lines[1].contains("id: evt-1"))
+        XCTAssertTrue(lines[1].contains("recurrence: series"))
         XCTAssertTrue(lines[1].contains("location: Conference Room"))
     }
 
@@ -62,7 +68,13 @@ final class OutputPrinterTests: XCTestCase {
             endDate: Date(timeIntervalSince1970: 1_775_300_400),
             isAllDay: false,
             location: "Conference Room",
-            notes: "Bring mocks"
+            notes: "Bring mocks",
+            recurrence: EventRecurrence(
+                kind: .detachedOccurrence,
+                summary: "Every week",
+                occurrenceDate: Date(timeIntervalSince1970: 1_775_298_600),
+                seriesIdentifier: "series-1"
+            )
         )
 
         let lines = OutputPrinter.renderEvent(event, calendarTitles: ["work": "Work"])
@@ -72,7 +84,10 @@ final class OutputPrinterTests: XCTestCase {
         XCTAssertTrue(lines[2].contains("calendar: Work"))
         XCTAssertTrue(lines[3].contains("location: Conference Room"))
         XCTAssertTrue(lines[4].contains("notes: Bring mocks"))
-        XCTAssertTrue(lines[5].contains("id: evt-1"))
+        XCTAssertTrue(lines[5].contains("recurrence: detached occurrence"))
+        XCTAssertTrue(lines[6].contains("occurrence-date:"))
+        XCTAssertTrue(lines[7].contains("series-id: series-1"))
+        XCTAssertTrue(lines[8].contains("id: evt-1"))
     }
 
     func testRenderEventsShowsEmptyState() {

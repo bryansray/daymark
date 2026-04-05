@@ -9,6 +9,7 @@ public struct CalendarEvent: Codable, Identifiable, Sendable, Equatable {
     public let isAllDay: Bool
     public let location: String?
     public let notes: String?
+    public let recurrence: EventRecurrence?
 
     public init(
         id: String,
@@ -18,7 +19,8 @@ public struct CalendarEvent: Codable, Identifiable, Sendable, Equatable {
         endDate: Date,
         isAllDay: Bool,
         location: String? = nil,
-        notes: String? = nil
+        notes: String? = nil,
+        recurrence: EventRecurrence? = nil
     ) {
         self.id = id
         self.calendarID = calendarID
@@ -28,5 +30,6 @@ public struct CalendarEvent: Codable, Identifiable, Sendable, Equatable {
         self.isAllDay = isAllDay
         self.location = location
         self.notes = notes
+        self.recurrence = recurrence
     }
 }
