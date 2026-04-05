@@ -8,6 +8,7 @@ struct EventsCommand: AsyncParsableCommand {
         commandName: "events",
         abstract: "List or search calendar events.",
         subcommands: [
+            EventsGetCommand.self,
             EventsListCommand.self,
             EventsSearchCommand.self
         ]
@@ -15,6 +16,32 @@ struct EventsCommand: AsyncParsableCommand {
 
     mutating func run() async throws {
         throw CleanExit.helpRequest(self)
+    }
+}
+
+@available(macOS 10.15, *)
+struct EventsGetCommand: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "get",
+        abstract: "Get a single event by identifier."
+    )
+
+    @Option(name: .long, help: "Event identifier.")
+    var id: String
+
+    @Flag(name: .long, help: "Emit JSON output.")
+    var json = false
+
+    mutating func run() async throws {
+        let event = try await CLIContext.provider.getEvent(id: id)
+
+        if json {
+            try OutputPrinter.printJSON(event)
+        } else {
+            let calendars = try await CLIContext.provider.listCalendars()
+            let calendarTitles = Dictionary(uniqueKeysWithValues: calendars.map { ($0.id, $0.title) })
+            OutputPrinter.printEvent(event, calendarTitles: calendarTitles)
+        }
     }
 }
 

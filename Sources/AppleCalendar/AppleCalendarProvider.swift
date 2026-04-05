@@ -65,6 +65,26 @@ public final class AppleCalendarProvider: CalendarProvider, @unchecked Sendable 
         throw CalendarLookupError(id: id, name: name)
     }
 
+    public func getEvent(id: String) async throws -> CalendarEvent {
+        guard let event = store.event(withIdentifier: id) else {
+            struct EventLookupError: LocalizedError {
+                let id: String
+
+                var errorDescription: String? {
+                    "No event matched the provided identifier."
+                }
+
+                var failureReason: String? {
+                    "id=\(id)"
+                }
+            }
+
+            throw EventLookupError(id: id)
+        }
+
+        return EventKitMappers.calendarEvent(from: event)
+    }
+
     public func listEvents(from start: Date, to end: Date, calendars: [String]) async throws -> [CalendarEvent] {
         let selectedCalendars = matchingCalendars(calendars)
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: selectedCalendars)

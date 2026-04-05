@@ -27,6 +27,12 @@ enum OutputPrinter {
         }
     }
 
+    static func printEvent(_ event: CalendarEvent, calendarTitles: [String: String]) {
+        for line in renderEvent(event, calendarTitles: calendarTitles) {
+            Swift.print(line)
+        }
+    }
+
     static func printCalendar(_ calendar: CalendarSummary) {
         for line in renderCalendar(calendar) {
             Swift.print(line)
@@ -63,6 +69,25 @@ enum OutputPrinter {
             lines.append(eventDetails(event, calendarTitles: calendarTitles))
         }
 
+        return lines
+    }
+
+    static func renderEvent(_ event: CalendarEvent, calendarTitles: [String: String]) -> [String] {
+        var lines = [
+            event.title.bold,
+            "  " + eventDateSummary(event).lightBlack,
+            "  " + "calendar: \(calendarTitles[event.calendarID] ?? event.calendarID)".lightBlack
+        ]
+
+        if let location = trimmed(event.location) {
+            lines.append("  " + "location: \(location)".lightBlack)
+        }
+
+        if let notes = trimmed(event.notes) {
+            lines.append("  " + "notes: \(notes)".lightBlack)
+        }
+
+        lines.append("  " + "id: \(event.id)".lightBlack)
         return lines
     }
 
@@ -124,8 +149,17 @@ enum OutputPrinter {
         return "\(date)  ".lightBlack + "\(timeDescription)  ".blue.bold + event.title.bold
     }
 
+    private static func eventDateSummary(_ event: CalendarEvent) -> String {
+        let date = dayFormatter.string(from: event.startDate)
+        let timeDescription = event.isAllDay ? "All day" : "\(timeFormatter.string(from: event.startDate))-\(timeFormatter.string(from: event.endDate))"
+        return "\(date)  \(timeDescription)"
+    }
+
     private static func eventDetails(_ event: CalendarEvent, calendarTitles: [String: String]) -> String {
-        var parts = ["calendar: \(calendarTitles[event.calendarID] ?? event.calendarID)"]
+        var parts = [
+            "calendar: \(calendarTitles[event.calendarID] ?? event.calendarID)",
+            "id: \(event.id)"
+        ]
 
         if let location = trimmed(event.location) {
             parts.append("location: \(location)")

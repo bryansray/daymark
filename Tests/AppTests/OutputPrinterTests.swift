@@ -49,7 +49,30 @@ final class OutputPrinterTests: XCTestCase {
         XCTAssertEqual(lines.count, 2)
         XCTAssertTrue(lines[0].contains("Team Standup"))
         XCTAssertTrue(lines[1].contains("calendar: Work"))
+        XCTAssertTrue(lines[1].contains("id: evt-1"))
         XCTAssertTrue(lines[1].contains("location: Conference Room"))
+    }
+
+    func testRenderEventIncludesMetadata() {
+        let event = CalendarEvent(
+            id: "evt-1",
+            calendarID: "work",
+            title: "Design Review",
+            startDate: Date(timeIntervalSince1970: 1_775_298_600),
+            endDate: Date(timeIntervalSince1970: 1_775_300_400),
+            isAllDay: false,
+            location: "Conference Room",
+            notes: "Bring mocks"
+        )
+
+        let lines = OutputPrinter.renderEvent(event, calendarTitles: ["work": "Work"])
+
+        XCTAssertTrue(lines[0].contains("Design Review"))
+        XCTAssertTrue(lines[1].contains("Apr"))
+        XCTAssertTrue(lines[2].contains("calendar: Work"))
+        XCTAssertTrue(lines[3].contains("location: Conference Room"))
+        XCTAssertTrue(lines[4].contains("notes: Bring mocks"))
+        XCTAssertTrue(lines[5].contains("id: evt-1"))
     }
 
     func testRenderEventsShowsEmptyState() {
