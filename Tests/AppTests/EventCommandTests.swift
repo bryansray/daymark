@@ -180,17 +180,6 @@ final class EventCommandTests: XCTestCase {
     }
 }
 
-private final class CapturedOutput: @unchecked Sendable {
-    private let lock = NSLock()
-    private(set) var messages: [String] = []
-
-    func append(_ message: String) {
-        lock.lock()
-        defer { lock.unlock() }
-        messages.append(message)
-    }
-}
-
 private func makeEvent(id: String, title: String) -> CalendarEvent {
     CalendarEvent(
         id: id,
